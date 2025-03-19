@@ -1,6 +1,13 @@
 let productosEnCarrito = localStorage.getItem("productos-en-carrito");
 productosEnCarrito = productosEnCarrito ? JSON.parse(productosEnCarrito) : [];
 
+// Validación de estructura de productos
+if (!Array.isArray(productosEnCarrito)) {
+    console.error("Error: Los datos del carrito no son válidos.");
+    productosEnCarrito = [];
+    localStorage.setItem("productos-en-carrito", JSON.stringify(productosEnCarrito));
+}
+
 const contenedorCarritoVacio = document.querySelector("#carrito-vacio");
 const contenedorCarritoProductos = document.querySelector("#carrito-productos");
 const contenedorCarritoAcciones = document.querySelector("#carrito-acciones");
@@ -20,10 +27,15 @@ function cargarProductosCarrito() {
         contenedorCarritoProductos.innerHTML = "";
 
         productosEnCarrito.forEach(producto => {
+            if (!producto.titulo || !producto.precio || !producto.cantidad) {
+                console.warn("Producto con datos incompletos:", producto);
+                return; // Omite el producto si está incompleto
+            }
+
             const div = document.createElement("div");
             div.classList.add("carrito-producto");
             div.innerHTML = `
-                <img class="carrito-producto-imagen" src="${producto.imagen}" alt="${producto.titulo}" onerror="this.src='https://via.placeholder.com/250x250?text=Imagen+No+Disponible';">
+                <img class="carrito-producto-imagen" src="${producto.imagen || 'https://via.placeholder.com/250x250?text=Imagen+No+Disponible'}" alt="${producto.titulo}">
                 <div class="carrito-producto-titulo">
                     <small>Título</small>
                     <h3>${producto.titulo}</h3>
@@ -65,32 +77,21 @@ function actualizarBotonesEliminar() {
 }
 
 function eliminarDelCarrito(e) {
-    Toastify({
-        text: "Disco eliminado",
-        duration: 3000,
-        close: true,
-        gravity: "top",
-        position: "right",
-        stopOnFocus: true,
-        style: {
-            background: "linear-gradient(to right, #4b33a8, #785ce9)",
-            borderRadius: "2rem",
-            textTransform: "uppercase",
-            fontSize: ".75rem"
-        },
-        offset: {
-            x: '1.5rem',
-            y: '1.5rem'
-        },
-        onClick: function () { }
-    }).showToast();
-
     const idBoton = e.currentTarget.id;
     const index = productosEnCarrito.findIndex(producto => producto.id === idBoton);
     if (index !== -1) {
         productosEnCarrito.splice(index, 1);
-        cargarProductosCarrito();
         localStorage.setItem("productos-en-carrito", JSON.stringify(productosEnCarrito));
+        cargarProductosCarrito();
+
+        Toastify({
+            text: "Disco eliminado",
+            duration: 3000,
+            close: true,
+            gravity: "top",
+            position: "right",
+            style: { background: "linear-gradient(to right, #4b33a8, #785ce9)" }
+        }).showToast();
     }
 }
 
@@ -101,7 +102,6 @@ function vaciarCarrito() {
         icon: 'question',
         html: `Se van a borrar ${productosEnCarrito.reduce((acc, producto) => acc + producto.cantidad, 0)} discos.`,
         showCancelButton: true,
-        focusConfirm: false,
         confirmButtonText: 'Sí',
         cancelButtonText: 'No'
     }).then((result) => {
